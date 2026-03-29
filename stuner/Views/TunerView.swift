@@ -65,6 +65,11 @@ struct TunerView: View {
                     selectedString: tunerState.selectedString,
                     onSelect: { stringNum in
                         tunerState.selectedString = stringNum
+                        // Update tone if currently playing
+                        if tunerState.isPlayingTone, let num = stringNum,
+                           let string = tunerState.selectedTuning.strings.first(where: { $0.stringNumber == num }) {
+                            toneGenerator.play(frequency: string.frequency(a4: tunerState.a4Frequency))
+                        }
                     }
                 )
 
