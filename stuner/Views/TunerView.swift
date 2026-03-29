@@ -20,6 +20,44 @@ struct TunerView: View {
 
                 Spacer().frame(height: 32)
 
+                // Auto/Manual toggle
+                HStack(spacing: 0) {
+                    Button {
+                        tunerState.selectedString = nil
+                    } label: {
+                        Text("Auto")
+                            .font(.system(size: 13, weight: tunerState.selectedString == nil ? .semibold : .regular))
+                            .foregroundStyle(tunerState.selectedString == nil ? .white : .gray)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(tunerState.selectedString == nil ? Color.white.opacity(0.15) : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        // Switch to manual — lock to current target or first string
+                        if tunerState.selectedString == nil {
+                            tunerState.selectedString = tunerState.targetString?.stringNumber ?? 1
+                        }
+                    } label: {
+                        Text("Manual")
+                            .font(.system(size: 13, weight: tunerState.selectedString != nil ? .semibold : .regular))
+                            .foregroundStyle(tunerState.selectedString != nil ? .white : .gray)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(tunerState.selectedString != nil ? Color.white.opacity(0.15) : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .background(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                .padding(.bottom, 12)
+
                 // String selector
                 StringSelectorView(
                     strings: tunerState.selectedTuning.strings,

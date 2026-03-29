@@ -57,6 +57,7 @@ final class AudioEngine {
     func stop() {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
+        PitchDetector.reset()
         try? AVAudioSession.sharedInstance().setActive(false)
     }
 
@@ -69,7 +70,10 @@ final class AudioEngine {
         // Noise gate: calculate RMS level, ignore if too quiet
         var rms: Float = 0
         vDSP_rmsqv(samples, 1, &rms, vDSP_Length(frameLength))
-        guard rms > 0.005 else { return }
+        guard rms > 0.005 else {
+            PitchDetector.reset()  // Silence — reset so next pluck responds instantly
+            return
+        }
 
         if let result = PitchDetector.detectPitch(buffer: samples, sampleRate: rate) {
             onPitch?(result)
