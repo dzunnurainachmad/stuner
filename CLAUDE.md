@@ -30,9 +30,9 @@ xcodebuild test -project stuner.xcodeproj -scheme stuner -destination 'platform=
 Audio pipeline: `Microphone → AVAudioEngine (AudioEngine) → PitchDetector (YIN algorithm, vDSP) → TunerState.processPitch() → SwiftUI views`
 
 - **Models/** — `Note` enum (12 chromatic notes, frequency math) and `GuitarTuning`/`StringTuning` structs (6 built-in tunings, custom tuning support). All `Codable + Sendable`.
-- **ViewModels/TunerState.swift** — `@Observable` class holding all app state. Handles pitch processing with debounced string switching (8-confirmation threshold), cents calculation (clamped ±50), and UserDefaults persistence (A4 frequency, selected tuning, custom tunings).
-- **Audio/** — `AudioEngine` (mic input, 4096-sample buffers, noise gate RMS<0.005), `PitchDetector` (YIN autocorrelation with octave jump correction via NSLock-protected state machine), `ToneGenerator` (sine + harmonics reference tone with amplitude boost for low frequencies).
-- **Views/** — `TunerView` (main screen, owns AudioEngine/ToneGenerator), `StringSelectorView` (6 tappable circles), `CentsIndicatorView` (color-coded offset bar), `TuningPickerView` (built-in + custom tuning selection), `SettingsView` (A4 slider 420-460Hz).
+- **ViewModels/TunerState.swift** — `@Observable` class holding all app state. Handles pitch processing with debounced string switching (4-confirmation threshold), cents calculation (clamped ±50), and UserDefaults persistence (A4 frequency, selected tuning, custom tunings). Pauses pitch detection while tone generator is active.
+- **Audio/** — `AudioEngine` (mic input, 4096-sample buffers, noise gate RMS<0.005), `PitchDetector` (YIN autocorrelation with sub-octave correction + octave jump correction via NSLock-protected state machine, stableThreshold=2, EMA 80/20), `ToneGenerator` (sine + harmonics reference tone with amplitude boost for low frequencies).
+- **Views/** — `TunerView` (main screen, owns AudioEngine/ToneGenerator, portrait/landscape layouts via verticalSizeClass), `StringSelectorView` (6 tappable circles), `CentsIndicatorView` (color-coded offset bar), `TuningPickerView` (built-in + custom tuning selection), `SettingsView` (A4 slider 420-460Hz).
 
 ## Key Patterns
 

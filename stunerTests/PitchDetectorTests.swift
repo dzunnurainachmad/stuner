@@ -15,6 +15,18 @@ struct PitchDetectorTests {
         }
     }
 
+    /// Generates a wave with harmonics to simulate a real guitar string
+    private func guitarWave(frequency: Double, sampleRate: Double = 44100.0, count: Int = 4096) -> [Float] {
+        (0..<count).map { i in
+            let t = Double(i) / sampleRate
+            let fundamental = Float(sin(2.0 * Double.pi * frequency * t))
+            let harmonic2 = Float(sin(2.0 * Double.pi * 2.0 * frequency * t)) * 0.5
+            let harmonic3 = Float(sin(2.0 * Double.pi * 3.0 * frequency * t)) * 0.3
+            let harmonic4 = Float(sin(2.0 * Double.pi * 4.0 * frequency * t)) * 0.15
+            return fundamental + harmonic2 + harmonic3 + harmonic4
+        }
+    }
+
     @Test("Detects A4 = 440 Hz")
     func detectA4() {
         PitchDetector.reset()
@@ -94,12 +106,14 @@ struct PitchDetectorTests {
         }
     }
 
-    @Test("Octave correction prevents jump up")
+    @Test("Octave correction prevents jump up after stable")
     func octaveCorrectionUp() {
         PitchDetector.reset()
-        // Establish stable frequency at G3
+        // Establish stable frequency at G3 with enough readings (>= stableThreshold of 2)
         let g3Buffer = sineWave(frequency: 196.0)
-        _ = PitchDetector.detectPitch(buffer: g3Buffer, sampleRate: 44100.0)
+        for _ in 0..<3 {
+            _ = PitchDetector.detectPitch(buffer: g3Buffer, sampleRate: 44100.0)
+        }
 
         // Feed octave-up frequency (G4 ~392 Hz) — should snap back to ~196
         let g4Buffer = sineWave(frequency: 392.0)
@@ -110,12 +124,14 @@ struct PitchDetectorTests {
         }
     }
 
-    @Test("Octave correction prevents jump down")
+    @Test("Octave correction prevents jump down after stable")
     func octaveCorrectionDown() {
         PitchDetector.reset()
-        // Establish stable frequency at G3
+        // Establish stable frequency at G3 with enough readings (>= stableThreshold of 2)
         let g3Buffer = sineWave(frequency: 196.0)
-        _ = PitchDetector.detectPitch(buffer: g3Buffer, sampleRate: 44100.0)
+        for _ in 0..<3 {
+            _ = PitchDetector.detectPitch(buffer: g3Buffer, sampleRate: 44100.0)
+        }
 
         // Feed octave-down frequency (~98 Hz) — should snap back to ~196
         let lowBuffer = sineWave(frequency: 98.0)
@@ -123,6 +139,36 @@ struct PitchDetectorTests {
         #expect(result != nil)
         if let result {
             #expect(abs(result.frequency - 196.0) < 5.0)
+        }
+    }
+
+    @Test("Detects E2 with harmonics (no octave-up jump)")
+    func detectE2WithHarmonics() {
+        PitchDetector.reset()
+        let buffer = guitarWave(frequency: 82.41)
+        let result = PitchDetector.detectPitch(buffer: buffer, sampleRate: 44100.0)
+        #expect(result != nil)
+        if let result {
+            // Should detect ~82 Hz, not ~165 Hz (octave above)
+            #expect(result.frequency < 100.0, "E2 detected as octave above: \(result.frequency) Hz")
+            #expect(abs(result.frequency - 82.41) < 3.0)
+        }
+    }
+
+    @Test("Initial wrong detection does not lock in wrong octave")
+    func initialWrongOctaveOverridden() {
+        PitchDetector.reset()
+        // First reading: YIN detects E3 (wrong for E4 string)
+        let e3Buffer = sineWave(frequency: 164.81)
+        _ = PitchDetector.detectPitch(buffer: e3Buffer, sampleRate: 44100.0)
+
+        // Next reading: E4 comes in — should be accepted because stable
+        // frequency is not yet confirmed (count < threshold)
+        let e4Buffer = sineWave(frequency: 329.63)
+        let result = PitchDetector.detectPitch(buffer: e4Buffer, sampleRate: 44100.0)
+        #expect(result != nil)
+        if let result {
+            #expect(abs(result.frequency - 329.63) < 5.0, "Should accept E4 before stable is confirmed: \(result.frequency) Hz")
         }
     }
 

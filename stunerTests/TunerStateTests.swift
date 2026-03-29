@@ -150,4 +150,26 @@ struct TunerStateTests {
         #expect(state.selectedString == nil)
         #expect(state.selectedTuning.name == "Drop D")
     }
+
+    @Test("Pitch detection paused while tone is playing")
+    func tonePlayingPausesPitchDetection() {
+        let state = TunerState()
+        state.isPlayingTone = true
+        let e4Freq = Note.E.frequency(octave: 4, a4: 440.0)
+        state.processPitch(frequency: e4Freq, confidence: 0.9)
+        #expect(state.detectedFrequency == nil)
+    }
+
+    @Test("Pitch detection resumes after tone stops")
+    func toneStoppedResumesPitchDetection() {
+        let state = TunerState()
+        state.isPlayingTone = true
+        let e4Freq = Note.E.frequency(octave: 4, a4: 440.0)
+        state.processPitch(frequency: e4Freq, confidence: 0.9)
+        #expect(state.detectedFrequency == nil)
+
+        state.isPlayingTone = false
+        state.processPitch(frequency: e4Freq, confidence: 0.9)
+        #expect(state.detectedFrequency == e4Freq)
+    }
 }

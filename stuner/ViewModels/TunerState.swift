@@ -16,7 +16,11 @@ final class TunerState {
     var selectedTuning: GuitarTuning
     var selectedString: Int?  // nil = auto-detect, 1-6 = locked to string
     var a4Frequency: Double {
-        didSet { UserDefaults.standard.set(a4Frequency, forKey: "a4Frequency") }
+        didSet {
+            UserDefaults.standard.set(a4Frequency, forKey: "a4Frequency")
+            PitchDetector.reset()
+            clearDetection()
+        }
     }
 
     // MARK: - Custom tunings
@@ -28,7 +32,7 @@ final class TunerState {
     // MARK: - String switch debounce
     private var switchCandidate: Int?
     private var switchCount: Int = 0
-    private let switchThreshold = 8
+    private let switchThreshold = 4
 
     init() {
         let savedA4 = UserDefaults.standard.double(forKey: "a4Frequency")
@@ -41,7 +45,7 @@ final class TunerState {
     // MARK: - Pitch processing
 
     func processPitch(frequency: Double, confidence: Double) {
-        guard confidence > 0.7 else {
+        guard confidence > 0.7, !isPlayingTone else {
             return
         }
 
@@ -126,6 +130,8 @@ final class TunerState {
         selectedTuning = tuning
         selectedString = nil
         UserDefaults.standard.set(tuning.id.uuidString, forKey: "selectedTuningId")
+        PitchDetector.reset()
+        clearDetection()
     }
 
     func addCustomTuning(_ tuning: GuitarTuning) {

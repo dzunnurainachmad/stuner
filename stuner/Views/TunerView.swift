@@ -7,115 +7,18 @@ struct TunerView: View {
     @State private var showTuningPicker = false
     @State private var showSettings = false
 
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    private var isLandscape: Bool { verticalSizeClass == .compact }
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Header
-                Text("\(tunerState.selectedTuning.name) · A4 = \(Int(tunerState.a4Frequency)) Hz")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.gray)
-                    .padding(.top, 16)
-                    .accessibilityIdentifier("headerLabel")
-
-                Spacer().frame(height: 32)
-
-                // Auto/Manual toggle
-                HStack(spacing: 0) {
-                    Button {
-                        tunerState.selectedString = nil
-                    } label: {
-                        Text("Auto")
-                            .font(.system(size: 13, weight: tunerState.selectedString == nil ? .semibold : .regular))
-                            .foregroundStyle(tunerState.selectedString == nil ? .white : .gray)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(tunerState.selectedString == nil ? Color.white.opacity(0.15) : Color.clear)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("autoButton")
-
-                    Button {
-                        // Switch to manual — lock to current target or first string
-                        if tunerState.selectedString == nil {
-                            tunerState.selectedString = tunerState.targetString?.stringNumber ?? 1
-                        }
-                    } label: {
-                        Text("Manual")
-                            .font(.system(size: 13, weight: tunerState.selectedString != nil ? .semibold : .regular))
-                            .foregroundStyle(tunerState.selectedString != nil ? .white : .gray)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(tunerState.selectedString != nil ? Color.white.opacity(0.15) : Color.clear)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("manualButton")
-                }
-                .background(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                .padding(.bottom, 12)
-
-                // String selector
-                StringSelectorView(
-                    strings: tunerState.selectedTuning.strings,
-                    targetString: tunerState.targetString,
-                    selectedString: tunerState.selectedString,
-                    onSelect: { stringNum in
-                        tunerState.selectedString = stringNum
-                        // Update tone if currently playing
-                        if tunerState.isPlayingTone, let num = stringNum,
-                           let string = tunerState.selectedTuning.strings.first(where: { $0.stringNumber == num }) {
-                            toneGenerator.play(frequency: string.frequency(a4: tunerState.a4Frequency))
-                        }
-                    }
-                )
-
-                Spacer().frame(height: 48)
-
-                // Detected note
-                Text(tunerState.detectedNote?.displayName ?? "—")
-                    .font(.system(size: 96, weight: .ultraLight))
-                    .foregroundStyle(.white)
-                    .accessibilityIdentifier("detectedNote")
-
-                Text(frequencyText)
-                    .font(.system(size: 14))
-                    .foregroundStyle(.gray)
-                    .accessibilityIdentifier("frequencyLabel")
-
-                Spacer().frame(height: 40)
-
-                // Cents indicator
-                CentsIndicatorView(
-                    centsOffset: tunerState.centsOffset,
-                    confidence: tunerState.confidence
-                )
-                .padding(.horizontal, 40)
-
-                Spacer()
-
-                // Bottom controls
-                HStack(spacing: 48) {
-                    controlButton(icon: "speaker.wave.2", label: "Tone", isActive: tunerState.isPlayingTone) {
-                        toggleTone()
-                    }
-                    .accessibilityIdentifier("toneButton")
-                    controlButton(icon: "guitars", label: "Tuning") {
-                        showTuningPicker = true
-                    }
-                    .accessibilityIdentifier("tuningButton")
-                    controlButton(icon: "gearshape", label: "Settings") {
-                        showSettings = true
-                    }
-                    .accessibilityIdentifier("settingsButton")
-                }
-                .padding(.bottom, 32)
+            if isLandscape {
+                landscapeLayout
+            } else {
+                portraitLayout
             }
         }
         .preferredColorScheme(.dark)
@@ -128,6 +31,173 @@ struct TunerView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView(tunerState: tunerState)
                 .presentationDetents([.medium, .large])
+        }
+    }
+
+    // MARK: - Portrait Layout
+
+    private var portraitLayout: some View {
+        VStack(spacing: 0) {
+            headerView
+                .padding(.top, 16)
+
+            Spacer().frame(height: 32)
+
+            autoManualToggle
+                .padding(.bottom, 12)
+
+            stringSelector
+
+            Spacer().frame(height: 48)
+
+            noteDisplay(fontSize: 96)
+
+            frequencyLabel
+
+            Spacer().frame(height: 40)
+
+            CentsIndicatorView(
+                centsOffset: tunerState.centsOffset,
+                confidence: tunerState.confidence
+            )
+            .padding(.horizontal, 40)
+
+            Spacer()
+
+            bottomControls
+                .padding(.bottom, 32)
+        }
+    }
+
+    // MARK: - Landscape Layout
+
+    private var landscapeLayout: some View {
+        HStack(spacing: 0) {
+            // Left column: note + frequency
+            VStack(spacing: 4) {
+                Spacer()
+                noteDisplay(fontSize: 64)
+                frequencyLabel
+                Spacer()
+                bottomControls
+                    .padding(.bottom, 8)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Right column: header, toggle, strings, cents
+            VStack(spacing: 8) {
+                headerView
+
+                autoManualToggle
+
+                stringSelector
+
+                Spacer().frame(height: 12)
+
+                CentsIndicatorView(
+                    centsOffset: tunerState.centsOffset,
+                    confidence: tunerState.confidence
+                )
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
+        }
+    }
+
+    // MARK: - Shared Components
+
+    private var headerView: some View {
+        Text("\(tunerState.selectedTuning.name) · A4 = \(Int(tunerState.a4Frequency)) Hz")
+            .font(.system(size: 11))
+            .foregroundStyle(.gray)
+            .accessibilityIdentifier("headerLabel")
+    }
+
+    private var autoManualToggle: some View {
+        HStack(spacing: 0) {
+            Button {
+                tunerState.selectedString = nil
+            } label: {
+                Text("Auto")
+                    .font(.system(size: 13, weight: tunerState.selectedString == nil ? .semibold : .regular))
+                    .foregroundStyle(tunerState.selectedString == nil ? .white : .gray)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(tunerState.selectedString == nil ? Color.white.opacity(0.15) : Color.clear)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("autoButton")
+
+            Button {
+                if tunerState.selectedString == nil {
+                    tunerState.selectedString = tunerState.targetString?.stringNumber ?? 1
+                }
+            } label: {
+                Text("Manual")
+                    .font(.system(size: 13, weight: tunerState.selectedString != nil ? .semibold : .regular))
+                    .foregroundStyle(tunerState.selectedString != nil ? .white : .gray)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(tunerState.selectedString != nil ? Color.white.opacity(0.15) : Color.clear)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("manualButton")
+        }
+        .background(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
+    }
+
+    private var stringSelector: some View {
+        StringSelectorView(
+            strings: tunerState.selectedTuning.strings,
+            targetString: tunerState.targetString,
+            selectedString: tunerState.selectedString,
+            onSelect: { stringNum in
+                tunerState.selectedString = stringNum
+                if tunerState.isPlayingTone, let num = stringNum,
+                   let string = tunerState.selectedTuning.strings.first(where: { $0.stringNumber == num }) {
+                    toneGenerator.play(frequency: string.frequency(a4: tunerState.a4Frequency))
+                }
+            }
+        )
+    }
+
+    private func noteDisplay(fontSize: CGFloat) -> some View {
+        Text(tunerState.detectedNote?.displayName ?? "—")
+            .font(.system(size: fontSize, weight: .ultraLight))
+            .foregroundStyle(.white)
+            .accessibilityIdentifier("detectedNote")
+    }
+
+    private var frequencyLabel: some View {
+        Text(frequencyText)
+            .font(.system(size: 14))
+            .foregroundStyle(.gray)
+            .accessibilityIdentifier("frequencyLabel")
+    }
+
+    private var bottomControls: some View {
+        HStack(spacing: 48) {
+            controlButton(icon: "speaker.wave.2", label: "Tone", isActive: tunerState.isPlayingTone) {
+                toggleTone()
+            }
+            .accessibilityIdentifier("toneButton")
+            controlButton(icon: "guitars", label: "Tuning") {
+                showTuningPicker = true
+            }
+            .accessibilityIdentifier("tuningButton")
+            controlButton(icon: "gearshape", label: "Settings") {
+                showSettings = true
+            }
+            .accessibilityIdentifier("settingsButton")
         }
     }
 

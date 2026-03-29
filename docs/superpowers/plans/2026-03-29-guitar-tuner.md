@@ -1,19 +1,21 @@
 # stuner Guitar Tuner Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build a minimal iOS guitar tuner app with real-time pitch detection (YIN algorithm), reference tone playback, preset/custom tunings, and configurable A4 reference frequency.
 
 **Architecture:** Unidirectional data flow — AVAudioEngine captures mic input → PitchDetector (YIN) extracts frequency → TunerState computes cents offset and closest string → SwiftUI views render state. ToneGenerator uses a separate AVAudioEngine output path for reference tones. All state is centralized in an `@Observable` TunerState class.
 
-**Tech Stack:** Swift 5, SwiftUI, AVFoundation, Accelerate (vDSP), iOS 17.6+, @Observable macro
+**Tech Stack:** Swift 5.9+, SwiftUI, AVFoundation, Accelerate (vDSP), iOS 18.0+, @Observable macro
+
+**Status:** All tasks completed. App is fully functional with unit tests (Swift Testing) and UI tests (XCTest). Post-launch improvements: sub-octave correction in YIN (fixes E4/B3 octave-down jumps), landscape layout support, tone-playing pauses pitch detection, reduced debounce threshold (8→4), faster stable frequency lock-in (3→2), stronger EMA smoothing (80/20).
 
 **Project notes:**
 - Xcode uses `PBXFileSystemSynchronizedRootGroup` — files added to `stuner/` are auto-discovered, no pbxproj edits needed
 - `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` is enabled — audio work must explicitly opt out with `nonisolated` or custom actors
-- Unit test target `stunerTests` already exists
-- Build command: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' build`
-- Test command: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test`
+- Unit test target `stunerTests` uses Swift Testing framework; UI test target `stunerUITests` uses XCTest
+- Testing on real iPhone device only (no simulator)
+- UI tests reset UserDefaults via launch arguments for deterministic state
 
 ---
 
@@ -54,7 +56,7 @@ stunerTests/
 - Create: `stuner/Models/Note.swift`
 - Create: `stunerTests/NoteTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `stunerTests/NoteTests.swift`:
 
@@ -132,12 +134,12 @@ struct NoteTests {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: Build failure — `Note` not defined
 
-- [ ] **Step 3: Implement Note model**
+- [x] **Step 3: Implement Note model**
 
 Create `stuner/Models/Note.swift`:
 
@@ -199,12 +201,12 @@ enum Note: Int, CaseIterable, Codable, Sendable {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: All NoteTests pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add stuner/Models/Note.swift stunerTests/NoteTests.swift
@@ -219,7 +221,7 @@ git commit -m "feat: add Note model with frequency calculation and nearest-note 
 - Create: `stuner/Models/GuitarTuning.swift`
 - Create: `stunerTests/GuitarTuningTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `stunerTests/GuitarTuningTests.swift`:
 
@@ -308,12 +310,12 @@ struct GuitarTuningTests {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: Build failure — `StringTuning`, `GuitarTuning` not defined
 
-- [ ] **Step 3: Implement GuitarTuning model**
+- [x] **Step 3: Implement GuitarTuning model**
 
 Create `stuner/Models/GuitarTuning.swift`:
 
@@ -411,12 +413,12 @@ extension GuitarTuning {
 
 This is correct — Cs3 = Db3, Fs3 = Gb3 in equal temperament. The display will show "C#3" and "F#3" instead of "Db3" and "Gb3". This is acceptable since they are the same pitch.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: All GuitarTuningTests pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add stuner/Models/GuitarTuning.swift stunerTests/GuitarTuningTests.swift
@@ -431,7 +433,7 @@ git commit -m "feat: add GuitarTuning model with 6 built-in tuning presets"
 - Create: `stuner/Audio/PitchDetector.swift`
 - Create: `stunerTests/PitchDetectorTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `stunerTests/PitchDetectorTests.swift`:
 
@@ -506,12 +508,12 @@ struct PitchDetectorTests {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: Build failure — `PitchDetector` not defined
 
-- [ ] **Step 3: Implement YIN pitch detector**
+- [x] **Step 3: Implement YIN pitch detector**
 
 Create `stuner/Audio/PitchDetector.swift`:
 
@@ -618,12 +620,12 @@ enum PitchDetector {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: All PitchDetectorTests pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add stuner/Audio/PitchDetector.swift stunerTests/PitchDetectorTests.swift
@@ -638,7 +640,7 @@ git commit -m "feat: add YIN pitch detection algorithm with tests"
 - Create: `stuner/ViewModels/TunerState.swift`
 - Create: `stunerTests/TunerStateTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `stunerTests/TunerStateTests.swift`:
 
@@ -731,12 +733,12 @@ struct TunerStateTests {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: Build failure — `TunerState` not defined
 
-- [ ] **Step 3: Implement TunerState**
+- [x] **Step 3: Implement TunerState**
 
 Create `stuner/ViewModels/TunerState.swift`:
 
@@ -936,12 +938,12 @@ Keep it simple. Use the `make` helper with explicit IDs:
 
 Apply this change when implementing Task 2 Step 3 (replace the original `make` helper and static properties).
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: All TunerStateTests pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add stuner/ViewModels/TunerState.swift stunerTests/TunerStateTests.swift
@@ -957,7 +959,7 @@ git commit -m "feat: add TunerState observable with pitch processing and tuning 
 
 No unit tests for this task — it wraps hardware (microphone). Tested via integration on device.
 
-- [ ] **Step 1: Create AudioEngine**
+- [x] **Step 1: Create AudioEngine**
 
 Create `stuner/Audio/AudioEngine.swift`:
 
@@ -1011,12 +1013,12 @@ final class AudioEngine {
 }
 ```
 
-- [ ] **Step 2: Build to verify compilation**
+- [x] **Step 2: Build to verify compilation**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' build 2>&1 | tail -10`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add stuner/Audio/AudioEngine.swift
@@ -1032,7 +1034,7 @@ git commit -m "feat: add AudioEngine for mic capture feeding into PitchDetector"
 
 No unit tests — audio output hardware. Tested on device.
 
-- [ ] **Step 1: Create ToneGenerator**
+- [x] **Step 1: Create ToneGenerator**
 
 Create `stuner/Audio/ToneGenerator.swift`:
 
@@ -1093,12 +1095,12 @@ final class ToneGenerator {
 }
 ```
 
-- [ ] **Step 2: Build to verify compilation**
+- [x] **Step 2: Build to verify compilation**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' build 2>&1 | tail -10`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add stuner/Audio/ToneGenerator.swift
@@ -1114,7 +1116,7 @@ git commit -m "feat: add ToneGenerator for reference tone sine wave playback"
 - Create: `stuner/Views/StringSelectorView.swift`
 - Create: `stuner/Views/CentsIndicatorView.swift`
 
-- [ ] **Step 1: Create CentsIndicatorView**
+- [x] **Step 1: Create CentsIndicatorView**
 
 Create `stuner/Views/CentsIndicatorView.swift`:
 
@@ -1215,7 +1217,7 @@ struct CentsIndicatorView: View {
 }
 ```
 
-- [ ] **Step 2: Create StringSelectorView**
+- [x] **Step 2: Create StringSelectorView**
 
 Create `stuner/Views/StringSelectorView.swift`:
 
@@ -1276,7 +1278,7 @@ struct StringSelectorView: View {
 }
 ```
 
-- [ ] **Step 3: Create TunerView**
+- [x] **Step 3: Create TunerView**
 
 Create `stuner/Views/TunerView.swift`:
 
@@ -1425,7 +1427,7 @@ struct TunerView: View {
 }
 ```
 
-- [ ] **Step 4: Build to verify compilation**
+- [x] **Step 4: Build to verify compilation**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' build 2>&1 | tail -10`
 Expected: BUILD SUCCEEDED (may have warnings for missing TuningPickerView/SettingsView — those come in next task)
@@ -1450,7 +1452,7 @@ struct SettingsView: View {
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add stuner/Views/TunerView.swift stuner/Views/StringSelectorView.swift stuner/Views/CentsIndicatorView.swift stuner/Views/TuningPickerView.swift stuner/Views/SettingsView.swift
@@ -1465,7 +1467,7 @@ git commit -m "feat: add main tuner UI with string selector and cents indicator"
 - Modify: `stuner/Views/TuningPickerView.swift`
 - Modify: `stuner/Views/SettingsView.swift`
 
-- [ ] **Step 1: Implement TuningPickerView**
+- [x] **Step 1: Implement TuningPickerView**
 
 Replace `stuner/Views/TuningPickerView.swift`:
 
@@ -1596,7 +1598,7 @@ struct CustomTuningEditorView: View {
 }
 ```
 
-- [ ] **Step 2: Implement SettingsView**
+- [x] **Step 2: Implement SettingsView**
 
 Replace `stuner/Views/SettingsView.swift`:
 
@@ -1655,12 +1657,12 @@ struct SettingsView: View {
 }
 ```
 
-- [ ] **Step 3: Build to verify compilation**
+- [x] **Step 3: Build to verify compilation**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' build 2>&1 | tail -10`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add stuner/Views/TuningPickerView.swift stuner/Views/SettingsView.swift
@@ -1676,7 +1678,7 @@ git commit -m "feat: add tuning picker with custom tuning editor and settings vi
 - Modify: `stuner/ContentView.swift` (replace contents)
 - Create: `stuner/Info.plist`
 
-- [ ] **Step 1: Update stunerApp.swift**
+- [x] **Step 1: Update stunerApp.swift**
 
 Replace `stuner/stunerApp.swift`:
 
@@ -1695,7 +1697,7 @@ struct stunerApp: App {
 }
 ```
 
-- [ ] **Step 2: Delete ContentView.swift**
+- [x] **Step 2: Delete ContentView.swift**
 
 Remove `stuner/ContentView.swift` — it is no longer used. TunerView is the root view.
 
@@ -1703,7 +1705,7 @@ Remove `stuner/ContentView.swift` — it is no longer used. TunerView is the roo
 rm stuner/ContentView.swift
 ```
 
-- [ ] **Step 3: Add microphone permission to Info.plist**
+- [x] **Step 3: Add microphone permission to Info.plist**
 
 Create `stuner/Info.plist`:
 
@@ -1726,17 +1728,17 @@ INFOPLIST_FILE = stuner/Info.plist;
 
 This tells Xcode to merge the custom Info.plist keys with the auto-generated ones (`GENERATE_INFOPLIST_FILE = YES` is still on, so keys from both sources get merged).
 
-- [ ] **Step 4: Build to verify compilation**
+- [x] **Step 4: Build to verify compilation**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' build 2>&1 | tail -10`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 5: Run all tests**
+- [x] **Step 5: Run all tests**
 
 Run: `xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -20`
 Expected: All tests pass
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1750,7 +1752,7 @@ git commit -m "feat: wire up app entry point with mic permission and remove boil
 **Files:**
 - May modify any file for compilation fixes
 
-- [ ] **Step 1: Full clean build**
+- [x] **Step 1: Full clean build**
 
 ```bash
 xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' clean build 2>&1 | tail -20
@@ -1758,7 +1760,7 @@ xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS S
 
 Expected: BUILD SUCCEEDED with zero errors
 
-- [ ] **Step 2: Run all tests**
+- [x] **Step 2: Run all tests**
 
 ```bash
 xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS Simulator,name=iPhone 16' test 2>&1 | tail -30
@@ -1766,14 +1768,14 @@ xcodebuild -project stuner.xcodeproj -scheme stuner -destination 'platform=iOS S
 
 Expected: All tests pass
 
-- [ ] **Step 3: Fix any issues found**
+- [x] **Step 3: Fix any issues found**
 
 If build or tests fail, fix the issues and re-run. Common things to check:
 - Swift strict concurrency — audio callbacks may need `@Sendable` or `nonisolated`
 - MainActor isolation — `TunerState` properties accessed from audio thread need dispatching
 - Missing imports
 
-- [ ] **Step 4: Final commit if any fixes were needed**
+- [x] **Step 4: Final commit if any fixes were needed**
 
 ```bash
 git add -A
