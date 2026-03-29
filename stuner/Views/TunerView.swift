@@ -17,6 +17,7 @@ struct TunerView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.gray)
                     .padding(.top, 16)
+                    .accessibilityIdentifier("headerLabel")
 
                 Spacer().frame(height: 32)
 
@@ -36,6 +37,7 @@ struct TunerView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("autoButton")
 
                     Button {
                         // Switch to manual — lock to current target or first string
@@ -54,6 +56,7 @@ struct TunerView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("manualButton")
                 }
                 .background(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
                 .padding(.bottom, 12)
@@ -79,10 +82,12 @@ struct TunerView: View {
                 Text(tunerState.detectedNote?.displayName ?? "—")
                     .font(.system(size: 96, weight: .ultraLight))
                     .foregroundStyle(.white)
+                    .accessibilityIdentifier("detectedNote")
 
                 Text(frequencyText)
                     .font(.system(size: 14))
                     .foregroundStyle(.gray)
+                    .accessibilityIdentifier("frequencyLabel")
 
                 Spacer().frame(height: 40)
 
@@ -100,12 +105,15 @@ struct TunerView: View {
                     controlButton(icon: "speaker.wave.2", label: "Tone", isActive: tunerState.isPlayingTone) {
                         toggleTone()
                     }
+                    .accessibilityIdentifier("toneButton")
                     controlButton(icon: "guitars", label: "Tuning") {
                         showTuningPicker = true
                     }
+                    .accessibilityIdentifier("tuningButton")
                     controlButton(icon: "gearshape", label: "Settings") {
                         showSettings = true
                     }
+                    .accessibilityIdentifier("settingsButton")
                 }
                 .padding(.bottom, 32)
             }

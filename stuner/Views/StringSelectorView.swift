@@ -36,6 +36,7 @@ struct StringSelectorView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("string_\(string.displayName)")
             }
         }
     }
